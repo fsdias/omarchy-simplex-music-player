@@ -1,0 +1,23 @@
+{
+  "title": "Simplex Music Player",
+  "nothingPlaying": "Nothing playing",
+  "paused": "Paused",
+  "tracks": {
+    "one": "%1 track in %2",
+    "other": "%1 tracks in %2"
+  },
+  "noTracks": "No MP3 files in %1",
+  "scanning": "Looking for MP3 files…",
+  "noMatches": "No tracks match",
+  "search": "Search tracks…",
+  "mpvFailed": "Could not start mpv",
+  "volume": "Volume",
+  "shuffle": "Shuffle",
+  "repeat": "Repeat the list",
+  "stop": "Stop",
+  "rescan": "Look for new files",
+  "changeFolder": "Folder…",
+  "openFiles": "Files…",
+  "chooseFolderTitle": "Choose the music folder",
+  "chooseFilesTitle": "Choose MP3 files to play"
+}
