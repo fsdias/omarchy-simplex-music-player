@@ -17,11 +17,9 @@ reloads, and the panel picks it up again on load.
 | `zenity` | The **Folder…** and **Files…** pickers (optional; you can set the folder in `shell.json` instead) |
 | `mpv-mpris` | Media keys and Omarchy's Media widget controlling the player (optional) |
 
-Omarchy's base install already includes `mpv` and `mpv-mpris`. On another setup:
-
-```bash
-sudo pacman -S --needed mpv zenity mpv-mpris
-```
+Omarchy's base install already includes `mpv` and `mpv-mpris`. If any of
+these is missing, install it from the Arch repositories with your package
+manager.
 
 ## Install
 
