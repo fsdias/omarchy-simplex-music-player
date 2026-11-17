@@ -38,6 +38,7 @@ Panel {
   readonly property bool connected: mpv.connected
   property bool starting: false
   property bool startFailed: false
+  property bool mpvMissing: false
   property int connectTries: 0
   property var pending: []
   property string playingPath: ""
@@ -176,6 +177,7 @@ Panel {
         root.starting = false
         root.startFailed = true
         root.pending = []
+        mpvCheck.running = true
         return
       }
       mpv.connected = true
@@ -189,6 +191,13 @@ Panel {
     running: root.opened && root.playing
     triggeredOnStart: true
     onTriggered: root.sendNow(["get_property", "time-pos"], 100)
+  }
+
+  // After mpv fails to start, tell a missing mpv apart from other failures.
+  Process {
+    id: mpvCheck
+    command: ["sh", "-c", "command -v mpv"]
+    onExited: function(exitCode) { root.mpvMissing = exitCode !== 0 }
   }
 
   function sendNow(args, requestId) {
@@ -208,6 +217,7 @@ Panel {
     if (mpv.connected || starting) return
     starting = true
     startFailed = false
+    mpvMissing = false
     connectTries = 0
     Quickshell.execDetached([
       "mpv", "--idle=yes", "--no-video", "--no-terminal", "--force-window=no",
@@ -462,7 +472,7 @@ Panel {
               opacity: 0.65
               font.pixelSize: Style.font.caption
               text: {
-                if (root.startFailed) return strings.t("mpvFailed")
+                if (root.startFailed) return strings.t(root.mpvMissing ? "mpvMissing" : "mpvFailed")
                 if (root.active) return root.paused ? strings.t("paused") + (root.currentDetail ? " · " + root.currentDetail : "") : root.currentDetail
                 if (!root.scanned) return strings.t("scanning")
                 if (root.tracks.length === 0) return strings.t("noTracks").arg(root.folderLabel)

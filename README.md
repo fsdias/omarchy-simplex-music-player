@@ -13,7 +13,7 @@ reloads, and the panel picks it up again on load.
 
 | Package | Needed for |
 |---|---|
-| `mpv` | Playback (required) |
+| `mpv` | Playback (**required**; the panel says so if it is missing) |
 | `zenity` | The **Folder…** and **Files…** pickers (optional; you can set the folder in `shell.json` instead) |
 | `mpv-mpris` | Media keys and Omarchy's Media widget controlling the player (optional) |
 

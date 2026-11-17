@@ -11,6 +11,7 @@
   "noMatches": "No tracks match",
   "search": "Search tracks…",
   "mpvFailed": "Could not start mpv",
+  "mpvMissing": "mpv is not installed. Install it with: sudo pacman -S mpv",
   "volume": "Volume",
   "shuffle": "Shuffle",
   "repeat": "Repeat the list",

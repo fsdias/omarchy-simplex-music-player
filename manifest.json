@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "io.github.fsdias.simplex-music-player",
   "name": "Simplex Music Player",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Filipe Dias",
   "license": "MIT",
-  "description": "A bar widget that plays the MP3 files in a local folder through a background mpv, with search, shuffle, repeat and media-key support.",
+  "description": "A bar widget that plays the MP3 files in a local folder, with search, shuffle, repeat and media-key support. Requires mpv.",
   "kinds": [
     "bar-widget"
   ],
@@ -14,7 +14,7 @@
   },
   "barWidget": {
     "displayName": "Simplex Music Player",
-    "description": "Browse, search and play local MP3 files.",
+    "description": "Browse, search and play local MP3 files. Requires mpv.",
     "category": "Media",
     "aliases": [
       "mp3",
