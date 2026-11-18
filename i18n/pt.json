@@ -12,6 +12,7 @@
   "search": "Procurar faixas…",
   "mpvFailed": "Não foi possível iniciar o mpv",
   "mpvMissing": "O mpv não está instalado. Instale-o com: sudo pacman -S mpv",
+  "runtimeMissing": "Reprodução desligada: XDG_RUNTIME_DIR não está definido ou não é privado",
   "volume": "Volume",
   "shuffle": "Aleatório",
   "repeat": "Repetir a lista",

@@ -69,14 +69,17 @@ omarchy plugin remove io.github.fsdias.simplex-music-player
 ```
 
 The plugin writes nothing outside its own bar entry in `shell.json` (the
-folder and recent folders) and two runtime files in
-`$XDG_RUNTIME_DIR` (`simplex-music-player.sock` and
-`simplex-music-player.m3u`), which disappear at logout.
+folder and recent folders) and two runtime files in a private folder,
+`$XDG_RUNTIME_DIR/simplex-music-player/` (`mpv.sock` and `queue.m3u`), which
+disappear at logout. The plugin creates that folder with mode 0700 and checks
+that you own it and that it is not a symlink before using it. If
+`XDG_RUNTIME_DIR` is not set, playback stays off; the plugin never falls back
+to a shared directory such as `/tmp`.
 
 ## What it runs
 
 - `find -L <folder> -type f -iname '*.mp3'` to list tracks.
-- `mpv --idle` with a JSON IPC socket in `$XDG_RUNTIME_DIR`. The plugin sends
+- `mpv --idle` with a JSON IPC socket in `$XDG_RUNTIME_DIR/simplex-music-player/`. The plugin sends
   file names as JSON, never through a shell.
 - `zenity --file-selection`, only when you press **Folder…** or **Files…**.
 

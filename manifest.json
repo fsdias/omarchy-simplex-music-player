@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.fsdias.simplex-music-player",
   "name": "Simplex Music Player",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "Filipe Dias",
   "license": "MIT",
   "description": "A bar widget that plays the MP3 files in a local folder, with search, shuffle, repeat and media-key support. Requires mpv.",

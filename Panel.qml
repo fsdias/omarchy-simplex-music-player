@@ -21,9 +21,17 @@ Panel {
 
   // ---------------------------------------------------------------- setup
   readonly property string home: Quickshell.env("HOME") || ""
-  readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
-  readonly property string socketPath: runtimeDir + "/simplex-music-player.sock"
-  readonly property string queuePath: runtimeDir + "/simplex-music-player.m3u"
+  // The socket and queue live in a private folder inside $XDG_RUNTIME_DIR
+  // (per-user, mode 0700). There is no fallback to a shared directory such
+  // as /tmp: without XDG_RUNTIME_DIR, playback stays off. stateReady turns
+  // true only once prepDir has made the folder 0700 and confirmed that the
+  // user owns it and that it is not a symlink.
+  readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
+  readonly property string stateDir: runtimeDir !== "" ? runtimeDir + "/simplex-music-player" : ""
+  readonly property string socketPath: stateDir !== "" ? stateDir + "/mpv.sock" : ""
+  readonly property string queuePath: stateDir !== "" ? stateDir + "/queue.m3u" : ""
+  property bool stateReady: false
+  property bool stateFailed: false
   readonly property string folder: Model.expandHome(setting("folder", "~/Music"), home)
   readonly property string folderLabel: Model.tildify(folder, home)
 
@@ -128,7 +136,7 @@ Panel {
 
   // Play exactly the files picked, in the order picked, as their own queue.
   function playFiles(paths) {
-    if (paths.length === 0) return
+    if (paths.length === 0 || !root.stateReady) return
     queueFile.setText(paths.join("\n") + "\n")
     send(["loadlist", root.queuePath, "replace"])
     send(["set_property", "pause", false])
@@ -153,14 +161,14 @@ Panel {
   // ------------------------------------------------------------ mpv link
   Socket {
     id: mpv
-    path: root.socketPath
+    path: root.stateReady ? root.socketPath : ""
     parser: SplitParser { onRead: function(line) { root.handleMpv(line) } }
     onConnectedChanged: connected ? root.mpvAttached() : root.mpvDetached()
   }
 
   FileView {
     id: queueFile
-    path: root.queuePath
+    path: root.stateReady ? root.queuePath : ""
     blockWrites: true
     preload: false
     printErrors: false
@@ -200,6 +208,21 @@ Panel {
     onExited: function(exitCode) { root.mpvMissing = exitCode !== 0 }
   }
 
+  // Create the private runtime folder (0700) and check that the user owns
+  // it and that it is not a symlink. The path goes in as an argument, never
+  // as part of the shell text.
+  Process {
+    id: prepDir
+    command: ["sh", "-c",
+      'umask 077; d="$1"; mkdir -p -- "$d" && [ ! -L "$d" ] && [ -d "$d" ] && [ -O "$d" ] && chmod 700 -- "$d"',
+      "simplex-music-player", root.stateDir]
+    onExited: function(exitCode) {
+      root.stateReady = exitCode === 0
+      root.stateFailed = !root.stateReady
+      if (root.stateReady) mpv.connected = true
+    }
+  }
+
   function sendNow(args, requestId) {
     if (!mpv.connected) return
     mpv.write(Model.mpvCommand(args, requestId))
@@ -214,6 +237,7 @@ Panel {
   }
 
   function ensureMpv() {
+    if (!stateReady) { pending = []; return }
     if (mpv.connected || starting) return
     starting = true
     startFailed = false
@@ -271,19 +295,21 @@ Panel {
 
   function onBus(msg) {
     if (!msg) return
-    if (msg.type === "attach" && !mpv.connected) mpv.connected = true
+    if (msg.type === "attach" && stateReady && !mpv.connected) mpv.connected = true
     else if (msg.type === "shuffle") shuffle = msg.value === true
   }
 
   Component.onCompleted: {
     Model.subscribe(onBus)
-    mpv.connected = true
+    if (stateDir !== "") prepDir.running = true
+    else stateFailed = true
   }
   Component.onDestruction: Model.unsubscribe(onBus)
 
   // ------------------------------------------------------------ actions
   // Hand mpv a fresh queue that starts at tracks[index].
   function playIndex(index) {
+    if (!stateReady) return
     var order = Model.playOrder(tracks.length, index, shuffle, repeatAll, Math.random)
     if (order.length === 0) return
     queueFile.setText(Model.pathsFor(tracks, order))
@@ -294,7 +320,7 @@ Panel {
   // Rebuild what comes after the current track, leaving it playing; used when
   // shuffle or repeat changes mid-play.
   function requeueRest() {
-    if (!active || currentIndex < 0) return
+    if (!stateReady || !active || currentIndex < 0) return
     var order = Model.playOrder(tracks.length, currentIndex, shuffle, repeatAll, Math.random).slice(1)
     sendNow(["playlist-clear"])
     if (order.length === 0) return
@@ -472,6 +498,7 @@ Panel {
               opacity: 0.65
               font.pixelSize: Style.font.caption
               text: {
+                if (root.stateFailed) return strings.t("runtimeMissing")
                 if (root.startFailed) return strings.t(root.mpvMissing ? "mpvMissing" : "mpvFailed")
                 if (root.active) return root.paused ? strings.t("paused") + (root.currentDetail ? " · " + root.currentDetail : "") : root.currentDetail
                 if (!root.scanned) return strings.t("scanning")

@@ -12,6 +12,7 @@
   "search": "Search tracks…",
   "mpvFailed": "Could not start mpv",
   "mpvMissing": "mpv is not installed. Install it with: sudo pacman -S mpv",
+  "runtimeMissing": "Playback is off: XDG_RUNTIME_DIR is not set or not private",
   "volume": "Volume",
   "shuffle": "Shuffle",
   "repeat": "Repeat the list",
