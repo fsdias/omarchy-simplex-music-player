@@ -80,7 +80,10 @@ to a shared directory such as `/tmp`.
 
 - `find -L <folder> -type f -iname '*.mp3'` to list tracks.
 - `mpv --idle` with a JSON IPC socket in `$XDG_RUNTIME_DIR/simplex-music-player/`. The plugin sends
-  file names as JSON, never through a shell.
+  file names as JSON, never through a shell. mpv runs with
+  `--demuxer=lavf --demuxer-lavf-format=mp3 --ytdl=no --sub-auto=no`, so every file is read
+  as MP3: a file named `.mp3` that really holds a playlist (M3U, PLS, HLS)
+  cannot make mpv contact a network address.
 - `zenity --file-selection`, only when you press **Folder…** or **Files…**.
 
 Track names and tags render as plain text.

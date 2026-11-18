@@ -32,6 +32,14 @@ Panel {
   readonly property string queuePath: stateDir !== "" ? stateDir + "/queue.m3u" : ""
   property bool stateReady: false
   property bool stateFailed: false
+
+  // mpv options that keep playback local. Every file is read with the MP3
+  // demuxer, so a file named .mp3 that really holds a playlist (M3U, PLS,
+  // HLS...) cannot make mpv follow a URL; youtube-dl lookups are off, and
+  // mpv does not load subtitle files that sit next to a track. The widget's
+  // own queue still loads, because loadlist parses it as a playlist
+  // regardless of these options.
+  readonly property var safeOptions: [["demuxer", "lavf"], ["demuxer-lavf-format", "mp3"], ["ytdl", "no"], ["sub-auto", "no"]]
   readonly property string folder: Model.expandHome(setting("folder", "~/Music"), home)
   readonly property string folderLabel: Model.tildify(folder, home)
 
@@ -245,10 +253,11 @@ Panel {
     connectTries = 0
     Quickshell.execDetached([
       "mpv", "--idle=yes", "--no-video", "--no-terminal", "--force-window=no",
-      "--input-ipc-server=" + root.socketPath,
+      "--input-ipc-server=" + root.socketPath
+    ].concat(root.safeOptions.map(function(o) { return "--" + o[0] + "=" + o[1] })).concat([
       "--volume=" + Math.round(root.volume),
       "--loop-playlist=" + (root.repeatAll ? "inf" : "no")
-    ])
+    ]))
     retryTimer.restart()
   }
 
@@ -256,6 +265,9 @@ Panel {
     starting = false
     startFailed = false
     retryTimer.stop()
+    // Also set the safe options on an mpv that was already running, before
+    // anything is played.
+    for (var s = 0; s < safeOptions.length; s++) sendNow(["set_property", safeOptions[s][0], safeOptions[s][1]])
     var props = ["pause", "duration", "volume", "path", "idle-active", "metadata", "loop-playlist"]
     for (var i = 0; i < props.length; i++) sendNow(["observe_property", i + 1, props[i]])
     var queued = pending
