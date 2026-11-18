@@ -6,6 +6,8 @@ pause, skip, seek, set the volume, shuffle and repeat. *Simplex* is Latin for
 "simple": the player has no library database, no streaming and no network
 access.
 
+![The Simplex Music Player panel, playing a track from ~/Music](preview.png)
+
 Playback runs in a background `mpv`, so the music keeps going when the shell
 reloads, and the panel picks it up again on load.
 
@@ -68,6 +70,8 @@ omarchy-shell io.github.fsdias.simplex-music-player stop   # stop the background
 omarchy plugin remove io.github.fsdias.simplex-music-player
 ```
 
+## Files and privacy
+
 The plugin writes nothing outside its own bar entry in `shell.json` (the
 folder and recent folders) and two runtime files in a private folder,
 `$XDG_RUNTIME_DIR/simplex-music-player/` (`mpv.sock` and `queue.m3u`), which
@@ -86,7 +90,14 @@ to a shared directory such as `/tmp`.
   cannot make mpv contact a network address.
 - `zenity --file-selection`, only when you press **Folder…** or **Files…**.
 
-Track names and tags render as plain text.
+Track names and tags render as plain text. The background `mpv` still reads
+your own mpv configuration and scripts (for example `mpv-mpris`).
+
+## Limitations
+
+- MP3 files only.
+- Lists up to 20,000 tracks per folder.
+- One widget per bar; every monitor's copy controls the same player.
 
 ## Development
 
