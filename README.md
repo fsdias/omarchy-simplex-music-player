@@ -96,7 +96,8 @@ your own mpv configuration and scripts (for example `mpv-mpris`).
 ## Limitations
 
 - MP3 files only.
-- Lists up to 20,000 tracks per folder.
+- Lists up to 20,000 tracks per folder; the scan stops there.
+- Skips files whose name or folder name contains a line break.
 - One widget per bar; every monitor's copy controls the same player.
 
 ## Development

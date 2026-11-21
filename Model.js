@@ -37,20 +37,32 @@ function stripExtension(name) {
   return String(name).replace(/\.mp3$/i, "")
 }
 
+// True for a path that one line of a list (find output, the M3U queue) can
+// hold unambiguously: absolute, no control characters, no "." or ".." parts.
+function cleanPath(path) {
+  var p = String(path || "")
+  if (p.charAt(0) !== "/") return false
+  if (/[\x00-\x1f\x7f]/.test(p)) return false
+  return !/(^|\/)\.\.?(\/|$)/.test(p) && p.indexOf("//") < 0
+}
+
 // Output of `find <root> -type f -iname '*.mp3'` -> sorted track objects:
 // { path, name, folder } where folder is relative to root ("" at the top).
+// Only paths inside root count, so a line cut out of a file name that holds a
+// newline can never point the queue at a file outside the chosen folder.
 function parseFileList(text, root) {
   var base = String(root || "").replace(/\/+$/, "")
+  if (!cleanPath(base + "/")) return []
   var lines = String(text || "").split("\n")
   var tracks = []
   var seen = ({})
   for (var i = 0; i < lines.length && tracks.length < MAX_TRACKS; i++) {
     var path = lines[i]
-    if (!path || path.charAt(0) !== "/") continue
+    if (path.indexOf(base + "/") !== 0 || !cleanPath(path)) continue
     if (!/\.mp3$/i.test(path)) continue
     if (seen[path]) continue
     seen[path] = true
-    var rel = base && path.indexOf(base + "/") === 0 ? path.slice(base.length + 1) : path
+    var rel = path.slice(base.length + 1)
     var cut = rel.lastIndexOf("/")
     tracks.push({
       path: path,
@@ -184,12 +196,37 @@ function broadcast(msg) {
 // zenity's output (one path per line) -> absolute paths, at most 2000.
 function pickedPaths(text) {
   var out = []
-  var lines = String(text || "").split("\n")
+  var lines = String(text || "").replace(/\n+$/, "").split("\n")
   for (var i = 0; i < lines.length && out.length < 2000; i++) {
     var p = lines[i].replace(/\r$/, "")
-    if (p && p.charAt(0) === "/") out.push(p)
+    if (p) out.push(p)
   }
   return out
+}
+
+function parentOf(path) {
+  var s = String(path)
+  return s.slice(0, s.lastIndexOf("/") + 1)
+}
+
+// The folder picker returns one path. Anything else (a name holding a newline
+// splits into several lines) is refused.
+function pickedFolder(text) {
+  var picked = pickedPaths(text)
+  return picked.length === 1 && cleanPath(picked[0]) ? picked[0] : ""
+}
+
+// The files picker returns paths from one folder, one per line. A file name
+// holding a newline would split into lines that look like other paths, so the
+// whole pick is refused unless every line is a clean path in the same folder.
+function pickedFiles(text) {
+  var picked = pickedPaths(text)
+  if (picked.length === 0) return []
+  var dir = parentOf(picked[0])
+  for (var i = 0; i < picked.length; i++) {
+    if (!cleanPath(picked[i]) || parentOf(picked[i]) !== dir) return []
+  }
+  return picked.filter(function(p) { return /\.mp3$/i.test(p) })
 }
 
 // The stored recent-folder list, cleaned: strings only, no duplicates, at most 5.

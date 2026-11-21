@@ -119,8 +119,29 @@ test("broadcast reaches subscribers and drops ones that throw", () => {
   M.unsubscribe(ok)
 })
 
-test("pickedPaths keeps absolute paths only", () => {
-  assert.deepEqual(plain(M.pickedPaths("/a.mp3\r\nrel.mp3\n\n/b c.mp3\n")), ["/a.mp3", "/b c.mp3"])
+test("pickedFiles keeps a clean pick from one folder, .mp3 only", () => {
+  assert.deepEqual(plain(M.pickedFiles("/d/a.mp3\r\n/d/b c.MP3\n/d/notes.txt\n")), ["/d/a.mp3", "/d/b c.MP3"])
+  assert.deepEqual(plain(M.pickedFiles("")), [])
+})
+
+test("pickedFiles refuses a pick split by a newline in a file name", () => {
+  // "/d/x\n/home/me/secret.mp3" as one file name reaches us as two lines.
+  assert.deepEqual(plain(M.pickedFiles("/d/x\n/home/me/secret.mp3\n/d/a.mp3\n")), [])
+  assert.deepEqual(plain(M.pickedFiles("/d/a.mp3\nrel.mp3\n")), [])
+  assert.deepEqual(plain(M.pickedFiles("/d/../etc/a.mp3\n")), [])
+})
+
+test("pickedFolder takes exactly one clean path", () => {
+  assert.equal(M.pickedFolder("/home/me/Music\n"), "/home/me/Music")
+  assert.equal(M.pickedFolder("/home/me/evil\n/etc\n"), "")
+  assert.equal(M.pickedFolder("Music\n"), "")
+})
+
+test("parseFileList drops lines outside the folder and odd paths", () => {
+  // A name like "x\n/home/me/secret.mp3" inside /m arrives as two lines.
+  const text = "/m/x\n/home/me/secret.mp3\n/m/ok.mp3\n/m/../etc/a.mp3\n/mx/b.mp3\n/m/t\tab.mp3"
+  assert.deepEqual(plain(M.parseFileList(text, "/m").map(x => x.path)), ["/m/ok.mp3"])
+  assert.deepEqual(plain(M.parseFileList("/m/a.mp3", "relative")), [])
 })
 
 test("recentList cleans stored folders; addRecent moves to front", () => {

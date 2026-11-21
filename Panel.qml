@@ -92,7 +92,11 @@ Panel {
 
   function rescan() {
     if (scanProc.running) { rescanAgain = true; return }
-    scanProc.command = ["find", "-L", root.folder, "-type", "f", "-iname", "*.mp3"]
+    // Names holding a newline are skipped (one line per path), and head stops
+    // find at the track cap so a huge library never piles up in memory.
+    scanProc.command = ["sh", "-c",
+      'find -L "$1" -type f -iname "*.mp3" ! -path "*$2*" -print 2>/dev/null | head -n "$3"',
+      "sh", root.folder, "\n", String(Model.MAX_TRACKS)]
     scanProc.running = true
   }
 
@@ -156,9 +160,10 @@ Panel {
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
-        var picked = Model.pickedPaths(text)
-        if (pickProc.mode === "folder" && picked.length > 0) root.setFolder(picked[0])
-        else if (pickProc.mode === "files") root.playFiles(picked.filter(function(p) { return /\.mp3$/i.test(p) }))
+        if (pickProc.mode === "folder") {
+          var dir = Model.pickedFolder(text)
+          if (dir) root.setFolder(dir)
+        } else if (pickProc.mode === "files") root.playFiles(Model.pickedFiles(text))
       }
     }
   }
@@ -441,18 +446,18 @@ Panel {
 
     content: FocusScope {
       id: body
-      property alias filterField: filterInput
+      readonly property Item filterField: filterLoader.item
       anchors.fill: parent
       implicitHeight: column.implicitHeight
 
       // Sees keys before the search line; what it leaves is typed there.
       Item {
-        id: keyHandler
+        id: panelKeys
         Keys.onPressed: function(event) {
           var ctrl = (event.modifiers & Qt.ControlModifier) !== 0
           var k = event.key
           if (k === Qt.Key_Escape) {
-            if (filterInput.text !== "") filterInput.text = ""
+            if (root.query !== "") { root.query = ""; if (filterLoader.item) filterLoader.item.text = "" }
             else root.close()
           } else if (k === Qt.Key_Tab || k === Qt.Key_Backtab) {
             root.switchPanel((event.modifiers & Qt.ShiftModifier) || k === Qt.Key_Backtab ? -1 : 1)
@@ -724,7 +729,7 @@ Panel {
         // ---------- Search ----------
         Item {
           width: parent.width
-          implicitHeight: Math.max(filterInput.implicitHeight, Style.space(24))
+          implicitHeight: Math.max(filterLoader.implicitHeight, Style.space(24))
 
           Text {
             id: searchIcon
@@ -738,23 +743,34 @@ Panel {
             font.pixelSize: Style.font.body
           }
 
-          FilterInput {
-            id: filterInput
+          // The editable field exists only while the panel is on screen, so a
+          // hidden panel holds no text input that could touch the clipboard.
+          // The search text itself lives in root.query and survives a close.
+          Loader {
+            id: filterLoader
             anchors.left: searchIcon.right
             anchors.leftMargin: Style.space(8)
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            keyHandler: keyHandler
-            color: root.bar.foreground
-            font.family: root.bar.fontFamily
-            font.pixelSize: Style.font.body
-            onTextChanged: root.query = text
+            active: panel.visible
+            // Built just after the panel hands out focus, so take it here.
+            onLoaded: Qt.callLater(function() {
+              if (root.opened && filterLoader.item) filterLoader.item.forceActiveFocus()
+            })
+            sourceComponent: FilterInput {
+              keyHandler: panelKeys
+              color: root.bar.foreground
+              font.family: root.bar.fontFamily
+              font.pixelSize: Style.font.body
+              Component.onCompleted: text = root.query
+              onTextChanged: root.query = text
+            }
           }
 
           PlainLabel {
-            anchors.fill: filterInput
+            anchors.fill: filterLoader
             verticalAlignment: Text.AlignVCenter
-            visible: filterInput.text === "" && !filterInput.preeditText
+            visible: root.query === "" && !(filterLoader.item && filterLoader.item.preeditText)
             opacity: 0.5
             font.pixelSize: Style.font.body
             text: strings.t("search")
